@@ -24,7 +24,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 
 class AppLockAccessibilityService : AccessibilityService() {
-    private lateinit var pinStore: PinStore
+    private val pinStore: PinStore by lazy { PinStore(applicationContext) }
     private var overlay: View? = null
     private var overlayPackage: String? = null
     private var unlockedPackage: String? = null
@@ -56,19 +56,30 @@ class AppLockAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        pinStore = PinStore(this)
-        ContextCompat.registerReceiver(
-            this,
-            biometricReceiver,
-            IntentFilter().apply {
-                addAction(ACTION_BIOMETRIC_UNLOCKED)
-                addAction(ACTION_BIOMETRIC_CANCELLED)
-            },
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
+        runCatching {
+            ContextCompat.registerReceiver(
+                this,
+                biometricReceiver,
+                IntentFilter().apply {
+                    addAction(ACTION_BIOMETRIC_UNLOCKED)
+                    addAction(ACTION_BIOMETRIC_CANCELLED)
+                },
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+        }.onFailure {
+            // The service can still provide PIN-based locking without the receiver.
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        runCatching {
+            handleAccessibilityEvent(event)
+        }.onFailure {
+            removeOverlay()
+        }
+    }
+
+    private fun handleAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
         if (packageName == this.packageName || biometricInProgress) return
 
@@ -180,7 +191,11 @@ class AppLockAccessibilityService : AccessibilityService() {
             }
         )
 
-        if (pinStore.isBiometricEnabled() && BiometricSupport.canAuthenticate(this)) {
+        val biometricAvailable = runCatching {
+            BiometricSupport.canAuthenticate(this)
+        }.getOrDefault(false)
+
+        if (pinStore.isBiometricEnabled() && biometricAvailable) {
             val biometric = Button(this).apply {
                 text = "Use fingerprint / face"
                 textSize = 14f
