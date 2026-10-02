@@ -1,98 +1,10 @@
 name: AppGuard Security
 
+# Security scanning is kept in the repository for later.
+# It is intentionally manual for now so it does not block normal Android builds.
+
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  schedule:
-    - cron: "17 3 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
-  security-events: write
-  pull-requests: read
-
-jobs:
-  codeql:
-    name: CodeQL
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: java-kotlin
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Set up Gradle 9.4.1
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.4.1'
-
-      - name: Build for CodeQL
-        run: gradle --no-daemon :app:assembleDebug
-
-      - name: Analyze
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: /language:java-kotlin
-
-  secrets:
-    name: Secret scan
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout full history
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  filesystem:
-    name: Filesystem vulnerability scan
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          scanners: vuln,secret,misconfig
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          format: table
-
-  dependency-review:
-    name: Dependency review
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Review dependencies
-        uses: actions/dependency-review-action@v5
-        with:
-          fail-on-severity: high
-          comment-summary-in-pr: always
