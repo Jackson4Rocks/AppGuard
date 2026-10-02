@@ -40,11 +40,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.clip
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -114,9 +114,9 @@ private fun DashboardUi() {
     ) { padding ->
         when (Tab.valueOf(tab)) {
             Tab.HOME -> HomePage(padding, locked.size, { tab = Tab.APPS.name }, { tab = Tab.SETTINGS.name })
-            Tab.APPS -> AppsPage(padding, apps, locked) {
+            Tab.APPS -> AppsPage(padding, apps, locked) { packageName, enabled ->
                 val next = locked.toMutableSet()
-                if (it.second) next.add(it.first) else next.remove(it.first)
+                if (enabled) next.add(packageName) else next.remove(packageName)
                 prefs.edit().putStringSet("locked_packages", next).apply()
                 refresh++
             }
@@ -205,7 +205,7 @@ private fun AppsPage(
     padding: PaddingValues,
     apps: List<Pair<String, String>>,
     locked: Set<String>,
-    onChange: (Pair<String, Boolean>) -> Unit
+    onChange: (String, Boolean) -> Unit
 ) {
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
@@ -235,7 +235,7 @@ private fun AppsPage(
                         Text(app.second, fontWeight = FontWeight.Medium)
                         Text(app.first, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Switch(checked = checked, onCheckedChange = { onChange(app to it) })
+                    Switch(checked = checked, onCheckedChange = { onChange(app.first, it) })
                 }
             }
         }
