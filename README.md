@@ -18,9 +18,6 @@
   <a href="https://github.com/Jackson4Rocks/AppGuard/actions/workflows/android-build.yml">
     <img src="https://github.com/Jackson4Rocks/AppGuard/actions/workflows/android-build.yml/badge.svg" alt="Android Build">
   </a>
-  <a href="https://github.com/Jackson4Rocks/AppGuard/actions/workflows/security.yml">
-    <img src="https://github.com/Jackson4Rocks/AppGuard/actions/workflows/security.yml/badge.svg" alt="Security">
-  </a>
 </p>
 
 ## ✨ Features
