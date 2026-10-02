@@ -76,14 +76,19 @@ class MainActivity : ComponentActivity() {
 
             setContent {
                 AppGuardTheme {
-                    AppGuardScreen(
-                        refreshTick = refreshTick,
-                        pinStore = pinStore,
-                        isServiceEnabled = runCatching {
-                            isAccessibilityServiceEnabled()
-                        }.getOrDefault(false),
-                        onRefresh = { refreshTick++ }
-                    )
+                    runCatching {
+                        AppGuardScreen(
+                            refreshTick = refreshTick,
+                            pinStore = pinStore,
+                            isServiceEnabled = runCatching {
+                                isAccessibilityServiceEnabled()
+                            }.getOrDefault(false),
+                            onRefresh = { refreshTick++ }
+                        )
+                    }.getOrElse { error ->
+                        Log.e(TAG, "AppGuard UI failed to compose", error)
+                        StartupErrorScreen()
+                    }
                 }
             }
         } catch (t: Throwable) {
@@ -560,16 +565,48 @@ private fun PermissionBanner(
     }
 }
 
+@Composable
+private fun StartupErrorScreen() {
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                "AppGuard couldn't load",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "The app is installed, but this device reported an error while loading the interface.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 private fun loadLaunchableApps(context: Context): List<LaunchableApp> {
     val pm = context.packageManager
     val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
 
     return runCatching {
-        pm.queryIntentActivities(intent, PackageManager.MATCH_ALL)
-            .map { it.activityInfo.applicationInfo }
+        pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            .mapNotNull { resolveInfo ->
+                resolveInfo.activityInfo?.applicationInfo
+            }
             .filter { it.packageName != context.packageName }
             .distinctBy { it.packageName }
-            .map { LaunchableApp(it.packageName, pm.getApplicationLabel(it).toString()) }
+            .mapNotNull { appInfo ->
+                runCatching {
+                    LaunchableApp(
+                        appInfo.packageName,
+                        pm.getApplicationLabel(appInfo).toString()
+                    )
+                }.getOrNull()
+            }
             .sortedBy { it.label.lowercase() }
     }.getOrDefault(emptyList())
 }
