@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "dev.jackson4rocks.appguard"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "dev.jackson4rocks.appguard"
