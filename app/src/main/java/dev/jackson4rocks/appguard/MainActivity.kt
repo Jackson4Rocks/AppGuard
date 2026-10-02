@@ -3,6 +3,7 @@ package dev.jackson4rocks.appguard
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -166,6 +167,14 @@ private fun AppGuardScreen(
     var message by rememberSaveable { mutableStateOf<String?>(null) }
     var biometricEnabled by rememberSaveable { mutableStateOf(pinStore.isBiometricEnabled()) }
     var showLockedOnly by rememberSaveable { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+
+    if (showSettings) {
+        AppGuardSettings(
+            onBack = { showSettings = false }
+        )
+        return
+    }
 
     val apps = remember(refreshTick) {
         runCatching { loadLaunchableApps(context) }.getOrDefault(emptyList())
@@ -196,6 +205,12 @@ private fun AppGuardScreen(
                     }
                 },
                 actions = {
+                    androidx.compose.material3.TextButton(
+                        onClick = { showSettings = true }
+                    ) {
+                        Text("Settings")
+                    }
+
                     Surface(
                         shape = RoundedCornerShape(16.dp),
                         color = if (isServiceEnabled) {
@@ -257,7 +272,7 @@ private fun AppGuardScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.appguard_icon),
+                            painter = painterResource(id = R.drawable.appguard_icon_vector),
                             contentDescription = "AppGuard",
                             modifier = Modifier.size(68.dp),
                             contentScale = ContentScale.Crop
@@ -561,6 +576,125 @@ private fun PermissionBanner(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
+        }
+    }
+}
+
+@Composable
+private fun AppGuardSettings(
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        topBar = {
+            MediumTopAppBar(
+                title = {
+                    Text(
+                        "Settings",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                },
+                navigationIcon = {
+                    androidx.compose.material3.TextButton(onClick = onBack) {
+                        Text("Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(16.dp)
+        ) {
+            item {
+                Card(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.appguard_icon_vector),
+                            contentDescription = "AppGuard",
+                            modifier = Modifier.size(76.dp)
+                        )
+
+                        Spacer(Modifier.width(16.dp))
+
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Project Maintainer",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                "Leon Sony",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                "Android & Linux developer",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Button(
+                    onClick = {
+                        runCatching {
+                            context.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://github.com/Jackson4Rocks")
+                                )
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("Open GitHub profile")
+                }
+            }
+
+            item {
+                Card(shape = RoundedCornerShape(20.dp)) {
+                    Column(Modifier.padding(18.dp)) {
+                        Text(
+                            "AppGuard",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Version 0.3.0",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "App locking is handled locally through Android's Accessibility Service and authentication APIs. No network permission is required.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
     }
 }
