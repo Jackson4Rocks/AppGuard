@@ -27,13 +27,27 @@ class AppLockAccessibilityService : AccessibilityService() {
     private var overlayPackage: String? = null
     private var unlockedPackage: String? = null
     private var lastPackage: String? = null
+    private var biometricInProgress = false
+    private var pendingBiometricPackage: String? = null
 
     private val biometricReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val target = intent.getStringExtra(EXTRA_PACKAGE)
-            if (target != null && target == overlayPackage) {
-                unlockedPackage = target
-                removeOverlay()
+            if (target == null || target != pendingBiometricPackage) return
+
+            when (intent.action) {
+                ACTION_BIOMETRIC_UNLOCKED -> {
+                    biometricInProgress = false
+                    pendingBiometricPackage = null
+                    unlockedPackage = target
+                    removeOverlay()
+                }
+
+                ACTION_BIOMETRIC_CANCELLED -> {
+                    biometricInProgress = false
+                    pendingBiometricPackage = null
+                    showLockOverlay(target)
+                }
             }
         }
     }
@@ -44,7 +58,10 @@ class AppLockAccessibilityService : AccessibilityService() {
         ContextCompat.registerReceiver(
             this,
             biometricReceiver,
-            IntentFilter(ACTION_BIOMETRIC_UNLOCKED),
+            IntentFilter().apply {
+                addAction(ACTION_BIOMETRIC_UNLOCKED)
+                addAction(ACTION_BIOMETRIC_CANCELLED)
+            },
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
     }
@@ -52,6 +69,7 @@ class AppLockAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
         if (packageName == this.packageName) return
+        if (biometricInProgress) return
 
         val windowEvent =
             event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
@@ -170,6 +188,10 @@ class AppLockAccessibilityService : AccessibilityService() {
                 isAllCaps = false
                 setOnClickListener {
                     val target = overlayPackage ?: return@setOnClickListener
+                    pendingBiometricPackage = target
+                    biometricInProgress = true
+                    removeOverlay()
+
                     try {
                         startActivity(
                             Intent(
@@ -180,6 +202,9 @@ class AppLockAccessibilityService : AccessibilityService() {
                                 .putExtra(LockAuthActivity.EXTRA_PACKAGE, target)
                         )
                     } catch (_: Exception) {
+                        biometricInProgress = false
+                        pendingBiometricPackage = null
+                        showLockOverlay(target)
                         Toast.makeText(
                             this@AppLockAccessibilityService,
                             "Could not open biometric prompt",
@@ -249,6 +274,7 @@ class AppLockAccessibilityService : AccessibilityService() {
 
     companion object {
         const val ACTION_BIOMETRIC_UNLOCKED = "dev.jackson4rocks.appguard.BIOMETRIC_UNLOCKED"
+        const val ACTION_BIOMETRIC_CANCELLED = "dev.jackson4rocks.appguard.BIOMETRIC_CANCELLED"
         const val EXTRA_PACKAGE = "target_package"
     }
 }
