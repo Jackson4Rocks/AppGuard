@@ -2,5 +2,6 @@
 <resources>
     <string name="app_name">AppGuard</string>
     <string name="accessibility_service_name">AppGuard App Lock</string>
-    <string name="accessibility_service_description">Detects selected foreground apps and shows AppGuard authentication before they can be used.</string>
+    <string name="accessibility_service_description">Locks selected apps by detecting when they become active and showing AppGuard authentication.</string>
+    <string name="accessibility_service_intro">AppGuard uses this service only to detect when a protected app opens. It does not read or modify the content of your apps.</string>
 </resources>
