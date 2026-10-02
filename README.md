@@ -1,7 +1,12 @@
 # 🛡️ AppGuard
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Jackson4Rocks/AppGuard/main/docs/appguard-icon.svg" width="128" alt="AppGuard icon">
+  <img
+    src="https://raw.githubusercontent.com/Jackson4Rocks/AppGuard/main/docs/appguard-icon.svg"
+    width="180"
+    alt="AppGuard icon"
+    style="border-radius: 34px;"
+  >
 </p>
 
 <p align="center">
