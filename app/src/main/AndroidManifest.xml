@@ -19,6 +19,7 @@
         <activity
             android:name=".LockAuthActivity"
             android:excludeFromRecents="true"
+            android:noHistory="true"
             android:exported="false"
             android:theme="@style/Theme.AppGuard.Transparent" />
 
