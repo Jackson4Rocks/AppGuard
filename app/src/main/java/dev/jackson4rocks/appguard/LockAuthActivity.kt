@@ -10,6 +10,7 @@ import androidx.fragment.app.FragmentActivity
 
 class LockAuthActivity : FragmentActivity() {
     private var targetPackage: String? = null
+    private var resultSent = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,7 +64,22 @@ class LockAuthActivity : FragmentActivity() {
         }
     }
 
+    override fun onBackPressed() {
+        sendResult(AppLockAccessibilityService.ACTION_BIOMETRIC_CANCELLED)
+        finish()
+    }
+
+    override fun onDestroy() {
+        if (!isChangingConfigurations) {
+            sendResult(AppLockAccessibilityService.ACTION_BIOMETRIC_CANCELLED)
+        }
+        super.onDestroy()
+    }
+
     private fun sendResult(action: String) {
+        if (resultSent) return
+        resultSent = true
+
         sendBroadcast(
             Intent(action)
                 .setPackage(packageName)
