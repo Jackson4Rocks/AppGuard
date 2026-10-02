@@ -23,33 +23,29 @@ class LockAuthActivity : FragmentActivity() {
                 BIOMETRIC_WEAK
             }
 
+        val callback = object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(
+                result: BiometricPrompt.AuthenticationResult
+            ) {
+                super.onAuthenticationSucceeded(result)
+                sendResult(AppLockAccessibilityService.ACTION_BIOMETRIC_UNLOCKED)
+                finish()
+            }
+
+            override fun onAuthenticationError(
+                errorCode: Int,
+                errString: CharSequence
+            ) {
+                super.onAuthenticationError(errorCode, errString)
+                sendResult(AppLockAccessibilityService.ACTION_BIOMETRIC_CANCELLED)
+                finish()
+            }
+        }
+
         val prompt = BiometricPrompt(
             this,
             ContextCompat.getMainExecutor(this),
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(
-                    result: BiometricPrompt.AuthenticationResult
-                ) {
-                    super.onAuthenticationSucceeded(result)
-                    sendBroadcast(
-                        Intent(AppLockAccessibilityService.ACTION_BIOMETRIC_UNLOCKED)
-                            .setPackage(packageName)
-                            .putExtra(
-                                AppLockAccessibilityService.EXTRA_PACKAGE,
-                                targetPackage
-                            )
-                    )
-                    finish()
-                }
-
-                override fun onAuthenticationError(
-                    errorCode: Int,
-                    errString: CharSequence
-                ) {
-                    super.onAuthenticationError(errorCode, errString)
-                    finish()
-                }
-            }
+            callback
         )
 
         val info = BiometricPrompt.PromptInfo.Builder()
@@ -59,7 +55,23 @@ class LockAuthActivity : FragmentActivity() {
             .setConfirmationRequired(false)
             .build()
 
-        prompt.authenticate(info)
+        runCatching {
+            prompt.authenticate(info)
+        }.onFailure {
+            sendResult(AppLockAccessibilityService.ACTION_BIOMETRIC_CANCELLED)
+            finish()
+        }
+    }
+
+    private fun sendResult(action: String) {
+        sendBroadcast(
+            Intent(action)
+                .setPackage(packageName)
+                .putExtra(
+                    AppLockAccessibilityService.EXTRA_PACKAGE,
+                    targetPackage
+                )
+        )
     }
 
     companion object {
