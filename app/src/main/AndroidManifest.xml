@@ -11,8 +11,8 @@
     <application
         android:allowBackup="false"
         android:label="@string/app_name"
-        android:icon="@drawable/appguard_icon"
-        android:roundIcon="@drawable/appguard_icon"
+        android:icon="@drawable/appguard_icon_vector"
+        android:roundIcon="@drawable/appguard_icon_vector"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppGuard">
 
