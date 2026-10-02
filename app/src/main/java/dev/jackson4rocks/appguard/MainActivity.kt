@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
+import android.widget.TextView
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -68,17 +70,32 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        pinStore = PinStore(this)
 
-        setContent {
-            AppGuardTheme {
-                AppGuardScreen(
-                    refreshTick = refreshTick,
-                    pinStore = pinStore,
-                    isServiceEnabled = isAccessibilityServiceEnabled(),
-                    onRefresh = { refreshTick++ }
-                )
+        try {
+            pinStore = PinStore(this)
+
+            setContent {
+                AppGuardTheme {
+                    AppGuardScreen(
+                        refreshTick = refreshTick,
+                        pinStore = pinStore,
+                        isServiceEnabled = runCatching {
+                            isAccessibilityServiceEnabled()
+                        }.getOrDefault(false),
+                        onRefresh = { refreshTick++ }
+                    )
+                }
             }
+        } catch (t: Throwable) {
+            Log.e(TAG, "AppGuard failed during startup", t)
+
+            setContentView(
+                TextView(this).apply {
+                    text = "AppGuard couldn't start.\n\nPlease restart the app."
+                    textSize = 18f
+                    setPadding(48, 48, 48, 48)
+                }
+            )
         }
     }
 
@@ -145,9 +162,15 @@ private fun AppGuardScreen(
     var biometricEnabled by rememberSaveable { mutableStateOf(pinStore.isBiometricEnabled()) }
     var showLockedOnly by rememberSaveable { mutableStateOf(false) }
 
-    val apps = remember(refreshTick) { loadLaunchableApps(context) }
-    val lockedPackages = remember(refreshTick) { pinStore.lockedPackages() }
-    val biometricAvailable = BiometricSupport.canAuthenticate(context)
+    val apps = remember(refreshTick) {
+        runCatching { loadLaunchableApps(context) }.getOrDefault(emptyList())
+    }
+    val lockedPackages = remember(refreshTick) {
+        runCatching { pinStore.lockedPackages() }.getOrDefault(emptySet())
+    }
+    val biometricAvailable = remember {
+        runCatching { BiometricSupport.canAuthenticate(context) }.getOrDefault(false)
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -541,10 +564,14 @@ private fun loadLaunchableApps(context: Context): List<LaunchableApp> {
     val pm = context.packageManager
     val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
 
-    return pm.queryIntentActivities(intent, PackageManager.MATCH_ALL)
-        .map { it.activityInfo.applicationInfo }
-        .filter { it.packageName != context.packageName }
-        .distinctBy { it.packageName }
-        .map { LaunchableApp(it.packageName, pm.getApplicationLabel(it).toString()) }
-        .sortedBy { it.label.lowercase() }
+    return runCatching {
+        pm.queryIntentActivities(intent, PackageManager.MATCH_ALL)
+            .map { it.activityInfo.applicationInfo }
+            .filter { it.packageName != context.packageName }
+            .distinctBy { it.packageName }
+            .map { LaunchableApp(it.packageName, pm.getApplicationLabel(it).toString()) }
+            .sortedBy { it.label.lowercase() }
+    }.getOrDefault(emptyList())
 }
+
+private const val TAG = "AppGuard"
