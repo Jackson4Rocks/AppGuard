@@ -13,6 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.text.InputType
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
@@ -25,12 +26,25 @@ import androidx.core.content.ContextCompat
 
 class AppLockAccessibilityService : AccessibilityService() {
     private val pinStore: PinStore by lazy { PinStore(applicationContext) }
+    private val lockPreferences: LockPreferences by lazy { LockPreferences(applicationContext) }
+    private val handler = Handler(Looper.getMainLooper())
+
     private var overlay: View? = null
     private var overlayPackage: String? = null
     private var unlockedPackage: String? = null
+    private var unlockedUntil: Long = 0L
     private var lastPackage: String? = null
     private var biometricInProgress = false
     private var pendingBiometricPackage: String? = null
+
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Intent.ACTION_SCREEN_OFF && lockPreferences.lockOnScreenOff()) {
+                clearUnlockState()
+                removeOverlay()
+            }
+        }
+    }
 
     private val biometricReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -42,13 +56,19 @@ class AppLockAccessibilityService : AccessibilityService() {
                     biometricInProgress = false
                     pendingBiometricPackage = null
                     unlockedPackage = target
+                    unlockedUntil = Long.MAX_VALUE
                     removeOverlay()
+                    handler.post {
+                        launchTargetPackage(target)
+                    }
                 }
 
                 ACTION_BIOMETRIC_CANCELLED -> {
                     biometricInProgress = false
                     pendingBiometricPackage = null
-                    showLockOverlay(target)
+                    clearUnlockState()
+                    removeOverlay()
+                    closeLockedApp(target)
                 }
             }
         }
@@ -56,6 +76,7 @@ class AppLockAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+
         runCatching {
             ContextCompat.registerReceiver(
                 this,
@@ -66,8 +87,12 @@ class AppLockAccessibilityService : AccessibilityService() {
                 },
                 ContextCompat.RECEIVER_NOT_EXPORTED
             )
-        }.onFailure {
-            // The service can still provide PIN-based locking without the receiver.
+            ContextCompat.registerReceiver(
+                this,
+                screenReceiver,
+                IntentFilter(Intent.ACTION_SCREEN_OFF),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
         }
     }
 
@@ -81,7 +106,7 @@ class AppLockAccessibilityService : AccessibilityService() {
 
     private fun handleAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
-        if (packageName == this.packageName || biometricInProgress) return
+        if (packageName == this.packageName) return
 
         val windowEvent =
             event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
@@ -90,18 +115,57 @@ class AppLockAccessibilityService : AccessibilityService() {
         if (!windowEvent) return
 
         if (packageName != lastPackage) {
-            if (packageName != unlockedPackage) {
-                unlockedPackage = null
+            val previous = lastPackage
+            if (!biometricInProgress && previous == unlockedPackage && previous != packageName) {
+                armRelock(previous)
             }
             lastPackage = packageName
         }
 
+        if (biometricInProgress) return
         if (overlay != null) return
-        if (unlockedPackage == packageName) return
         if (!pinStore.hasPin()) return
         if (!pinStore.lockedPackages().contains(packageName)) return
+        if (isCurrentlyUnlocked(packageName)) return
 
         showLockOverlay(packageName)
+    }
+
+    private fun isCurrentlyUnlocked(packageName: String): Boolean {
+        if (packageName != unlockedPackage) return false
+        if (unlockedUntil == Long.MAX_VALUE) return true
+
+        if (System.currentTimeMillis() < unlockedUntil) {
+            return true
+        }
+
+        clearUnlockState()
+        return false
+    }
+
+    private fun armRelock(packageName: String) {
+        val mode = lockPreferences.timing()
+        handler.removeCallbacksAndMessages(RELOCK_TOKEN)
+
+        if (mode.timeoutMs <= 0L) {
+            if (unlockedPackage == packageName) clearUnlockState()
+            return
+        }
+
+        unlockedPackage = packageName
+        unlockedUntil = System.currentTimeMillis() + mode.timeoutMs
+        handler.postAtTime(
+            {
+                if (unlockedPackage == packageName &&
+                    unlockedUntil != Long.MAX_VALUE &&
+                    System.currentTimeMillis() >= unlockedUntil
+                ) {
+                    clearUnlockState()
+                }
+            },
+            RELOCK_TOKEN,
+            unlockedUntil
+        )
     }
 
     private fun showLockOverlay(packageName: String) {
@@ -110,9 +174,11 @@ class AppLockAccessibilityService : AccessibilityService() {
 
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
 
-        val root = LinearLayout(this).apply {
+        val root = LockOverlayLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
+            isFocusable = true
+            isFocusableInTouchMode = true
             setPadding(dp(24), dp(24), dp(24), dp(24))
             background = rounded(Color.rgb(13, 29, 23), dp(28))
         }
@@ -125,12 +191,9 @@ class AppLockAccessibilityService : AccessibilityService() {
             background = rounded(Color.rgb(24, 54, 43), dp(20))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
-        root.addView(
-            shield,
-            LinearLayout.LayoutParams(dp(120), dp(56)).apply {
-                bottomMargin = dp(16)
-            }
-        )
+        root.addView(shield, LinearLayout.LayoutParams(dp(120), dp(56)).apply {
+            bottomMargin = dp(16)
+        })
 
         val title = TextView(this).apply {
             text = "App locked"
@@ -154,8 +217,7 @@ class AppLockAccessibilityService : AccessibilityService() {
             hint = "PIN"
             gravity = Gravity.CENTER
             textSize = 18f
-            inputType = InputType.TYPE_CLASS_NUMBER or
-                InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
             setTextColor(Color.WHITE)
             setHintTextColor(Color.rgb(150, 165, 158))
             background = rounded(Color.rgb(25, 43, 36), dp(18))
@@ -173,6 +235,7 @@ class AppLockAccessibilityService : AccessibilityService() {
                 val target = overlayPackage ?: return@setOnClickListener
                 if (pinStore.verify(pin.text.toString())) {
                     unlockedPackage = target
+                    unlockedUntil = Long.MAX_VALUE
                     removeOverlay()
                 } else {
                     pin.text?.clear()
@@ -184,12 +247,9 @@ class AppLockAccessibilityService : AccessibilityService() {
                 }
             }
         }
-        root.addView(
-            unlock,
-            LinearLayout.LayoutParams(-1, dp(54)).apply {
-                topMargin = dp(12)
-            }
-        )
+        root.addView(unlock, LinearLayout.LayoutParams(-1, dp(54)).apply {
+            topMargin = dp(12)
+        })
 
         val biometricAvailable = runCatching {
             BiometricSupport.canAuthenticate(this)
@@ -206,8 +266,6 @@ class AppLockAccessibilityService : AccessibilityService() {
                     val target = overlayPackage ?: return@setOnClickListener
                     pendingBiometricPackage = target
                     biometricInProgress = true
-
-                    removeOverlay()
 
                     Handler(Looper.getMainLooper()).post {
                         try {
@@ -232,13 +290,9 @@ class AppLockAccessibilityService : AccessibilityService() {
                     }
                 }
             }
-
-            root.addView(
-                biometric,
-                LinearLayout.LayoutParams(-1, dp(54)).apply {
-                    topMargin = dp(10)
-                }
-            )
+            root.addView(biometric, LinearLayout.LayoutParams(-1, dp(54)).apply {
+                topMargin = dp(10)
+            })
         }
 
         val params = WindowManager.LayoutParams(
@@ -257,11 +311,47 @@ class AppLockAccessibilityService : AccessibilityService() {
 
         try {
             wm.addView(root, params)
+            root.requestFocus()
             pin.requestFocus()
         } catch (_: Exception) {
             overlay = null
             overlayPackage = null
         }
+    }
+
+    private fun launchTargetPackage(packageName: String) {
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName) ?: return
+        launchIntent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+        )
+        runCatching { startActivity(launchIntent) }
+    }
+
+    private fun closeLockedApp(packageName: String) {
+        val target = packageName
+        handler.postDelayed({
+            performGlobalAction(GLOBAL_ACTION_BACK)
+            handler.postDelayed({
+                if (lastPackage == target) {
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                }
+            }, 220L)
+        }, 120L)
+    }
+
+    private fun handleLockBack() {
+        val target = overlayPackage ?: return
+        clearUnlockState()
+        removeOverlay()
+        closeLockedApp(target)
+    }
+
+    private fun clearUnlockState() {
+        unlockedPackage = null
+        unlockedUntil = 0L
+        handler.removeCallbacksAndMessages(RELOCK_TOKEN)
     }
 
     private fun removeOverlay() {
@@ -278,8 +368,20 @@ class AppLockAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         removeOverlay()
+        handler.removeCallbacksAndMessages(RELOCK_TOKEN)
         runCatching { unregisterReceiver(biometricReceiver) }
+        runCatching { unregisterReceiver(screenReceiver) }
         super.onDestroy()
+    }
+
+    private inner class LockOverlayLayout(context: Context) : LinearLayout(context) {
+        override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+            if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
+                handleLockBack()
+                return true
+            }
+            return super.dispatchKeyEvent(event)
+        }
     }
 
     private fun rounded(color: Int, radius: Int): GradientDrawable =
@@ -295,5 +397,6 @@ class AppLockAccessibilityService : AccessibilityService() {
         const val ACTION_BIOMETRIC_UNLOCKED = "dev.jackson4rocks.appguard.BIOMETRIC_UNLOCKED"
         const val ACTION_BIOMETRIC_CANCELLED = "dev.jackson4rocks.appguard.BIOMETRIC_CANCELLED"
         const val EXTRA_PACKAGE = "target_package"
+        private const val RELOCK_TOKEN = "appguard_relock"
     }
 }
