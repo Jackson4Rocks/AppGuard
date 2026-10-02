@@ -1,28 +1,98 @@
-# AppGuard
+# 🛡️ AppGuard
 
-A privacy-first Android app locker with a Material 3 UI.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Jackson4Rocks/AppGuard/main/docs/appguard-icon.svg" width="128" alt="AppGuard icon">
+</p>
 
-## Features
+<p align="center">
+  <b>A simple, modern Android app locker built for privacy.</b><br>
+  Lock selected apps behind a PIN or your device's fingerprint / face authentication.
+</p>
 
-- PIN-protected app locking
-- Fingerprint / face authentication through AndroidX BiometricPrompt
-- Accessibility-service based foreground app detection
-- Material 3 Compose interface with dynamic color
-- App allowlist/locklist management
-- No network permissions
+<p align="center">
+  <a href="https://github.com/Jackson4Rocks/AppGuard/actions/workflows/android-build.yml">
+    <img src="https://github.com/Jackson4Rocks/AppGuard/actions/workflows/android-build.yml/badge.svg" alt="Android Build">
+  </a>
+</p>
 
-## Build
+## ✨ Features
 
-Open the project in Android Studio and let Gradle sync the AndroidX dependencies.
+- 🔐 **App locking** — choose which installed apps should require authentication.
+- 🔢 **PIN protection** — create and change your own AppGuard PIN.
+- 👆 **Biometric unlock** — use fingerprint, face authentication, or your device credential where supported.
+- 🎨 **Material 3 UI** — modern Android interface with dynamic colors on supported devices.
+- ⚡ **Lightweight design** — no network permission is required by the app.
+- 🧩 **Accessibility-based lock detection** — AppGuard watches for protected apps opening and places its authentication screen over them.
 
-The app targets Android 16 / API 36 and supports Android 8.0 / API 26 and newer.
+## 🚀 Getting started
 
-## Accessibility
+1. Install AppGuard on your Android phone.
+2. Open AppGuard and create a PIN.
+3. Turn on **Fingerprint / face unlock** if your phone supports it.
+4. Open **Accessibility settings** and enable **AppGuard App Lock**.
+5. Select the apps you want to protect.
+6. Open one of those apps — AppGuard will ask for authentication before letting you continue.
 
-AppGuard needs its accessibility service enabled manually in Android Settings. The service only observes foreground/window changes needed for the app-lock feature.
+### 🔑 Unlocking
 
-## Notes
+You can unlock a protected app with your AppGuard PIN. When biometric authentication is enabled, you can also use the biometric prompt provided by Android.
 
-The standalone "Hide apps" launcher mode is planned separately. A normal third-party app cannot universally hide another app from every OEM launcher.
+## 🛠️ Building from source
 
-Biometric authentication uses AndroidX BiometricPrompt, with device-credential fallback on Android 11+ where supported.
+### Requirements
+
+- Android Studio
+- JDK 17
+- Android SDK 36
+- Android 8.0 (API 26) or newer for running the app
+
+Clone the repository:
+
+```bash
+git clone https://github.com/Jackson4Rocks/AppGuard.git
+cd AppGuard
+```
+
+Then open the project in Android Studio and let Gradle sync.
+
+To build a debug APK locally:
+
+```bash
+gradle --no-daemon :app:assembleDebug
+```
+
+The APK will be generated at:
+
+```
+app/build/outputs/apk/debug/app-debug.apk
+```
+
+## 🔒 Privacy & permissions
+
+AppGuard is designed to keep the implementation small and local.
+
+The current app does **not** request internet access. The Accessibility Service is used specifically to detect when a protected app becomes the foreground app and to display the lock overlay.
+
+Because Accessibility Services are powerful Android features, AppGuard requires you to explicitly enable its service in system settings.
+
+## 🧭 Roadmap
+
+- 🔒 Core app-lock improvements and stronger lock-state handling
+- 🧑‍💻 More polished settings and onboarding
+- 🏠 Optional launcher-based **Hide Apps** mode
+- 📱 Better support for OEM-specific Android behavior
+- 🧪 More device testing and automated checks
+
+> **Note:** Hide Apps is intentionally separate from the current app-lock system. A regular third-party Android app cannot universally hide another app from every OEM launcher, so that feature will be handled as its own launcher mode.
+
+## 🤝 Contributing
+
+Found a bug or have an idea? Open an issue or pull request on GitHub.
+
+AppGuard is an open-source project by **Jackson4Rocks**.
+
+---
+
+<p align="center">
+  Made with ❤️ for Android privacy.
+</p>
