@@ -2,7 +2,7 @@
 
 <p align="center">
   <img
-    src="https://raw.githubusercontent.com/Jackson4Rocks/AppGuard/main/docs/appguard-icon.svg"
+    src="https://raw.githubusercontent.com/Jackson4Rocks/AppGuard/main/docs/appguard_icon.png"
     width="180"
     alt="AppGuard icon"
     style="border-radius: 34px;"
@@ -18,6 +18,9 @@
   <a href="https://github.com/Jackson4Rocks/AppGuard/actions/workflows/android-build.yml">
     <img src="https://github.com/Jackson4Rocks/AppGuard/actions/workflows/android-build.yml/badge.svg" alt="Android Build">
   </a>
+  <a href="https://github.com/Jackson4Rocks/AppGuard/actions/workflows/security.yml">
+    <img src="https://github.com/Jackson4Rocks/AppGuard/actions/workflows/security.yml/badge.svg" alt="Security">
+  </a>
 </p>
 
 ## ✨ Features
@@ -25,7 +28,7 @@
 - 🔐 **App locking** — choose which installed apps should require authentication.
 - 🔢 **PIN protection** — create and change your own AppGuard PIN.
 - 👆 **Biometric unlock** — use fingerprint, face authentication, or your device credential where supported.
-- 🎨 **Material 3 UI** — modern Android interface with dynamic colors on supported devices.
+- 🎨 **Material 3 UI** — layout-based dashboard with an app bar, status pill, summary cards, and protected-app list.
 - ⚡ **Lightweight design** — no network permission is required by the app.
 - 🧩 **Accessibility-based lock detection** — AppGuard watches for protected apps opening and places its authentication screen over them.
 
@@ -37,6 +40,8 @@
 4. Open **Accessibility settings** and enable **AppGuard App Lock**.
 5. Select the apps you want to protect.
 6. Open one of those apps — AppGuard will ask for authentication before letting you continue.
+
+On recent Android versions, sideloaded apps that expose sensitive capabilities such as Accessibility Services may receive an additional system security confirmation. AppGuard does not bypass that protection; follow Android's system settings flow to enable the service.
 
 ### 🔑 Unlocking
 
@@ -79,6 +84,10 @@ AppGuard is designed to keep the implementation small and local.
 The current app does **not** request internet access. The Accessibility Service is used specifically to detect when a protected app becomes the foreground app and to display the lock overlay.
 
 Because Accessibility Services are powerful Android features, AppGuard requires you to explicitly enable its service in system settings.
+
+## 🛡️ Repository security
+
+GitHub Actions now checks the repository with CodeQL, Gitleaks, Trivy filesystem scanning, and dependency review. These checks are intended to catch common code, secret, configuration, and dependency security problems before they reach a release.
 
 ## 🧭 Roadmap
 
