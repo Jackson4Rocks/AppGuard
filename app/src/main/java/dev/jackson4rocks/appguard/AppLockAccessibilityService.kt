@@ -9,6 +9,8 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -68,8 +70,7 @@ class AppLockAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
-        if (packageName == this.packageName) return
-        if (biometricInProgress) return
+        if (packageName == this.packageName || biometricInProgress) return
 
         val windowEvent =
             event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
@@ -106,16 +107,16 @@ class AppLockAccessibilityService : AccessibilityService() {
         }
 
         val shield = TextView(this).apply {
-            text = "•"
+            text = "AppGuard"
             gravity = Gravity.CENTER
-            textSize = 30f
+            textSize = 18f
             setTextColor(Color.rgb(143, 245, 199))
             background = rounded(Color.rgb(24, 54, 43), dp(20))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
         root.addView(
             shield,
-            LinearLayout.LayoutParams(dp(56), dp(56)).apply {
+            LinearLayout.LayoutParams(dp(120), dp(56)).apply {
                 bottomMargin = dp(16)
             }
         )
@@ -190,26 +191,29 @@ class AppLockAccessibilityService : AccessibilityService() {
                     val target = overlayPackage ?: return@setOnClickListener
                     pendingBiometricPackage = target
                     biometricInProgress = true
+
                     removeOverlay()
 
-                    try {
-                        startActivity(
-                            Intent(
-                                this@AppLockAccessibilityService,
-                                LockAuthActivity::class.java
+                    Handler(Looper.getMainLooper()).post {
+                        try {
+                            startActivity(
+                                Intent(
+                                    this@AppLockAccessibilityService,
+                                    LockAuthActivity::class.java
+                                )
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    .putExtra(LockAuthActivity.EXTRA_PACKAGE, target)
                             )
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                .putExtra(LockAuthActivity.EXTRA_PACKAGE, target)
-                        )
-                    } catch (_: Exception) {
-                        biometricInProgress = false
-                        pendingBiometricPackage = null
-                        showLockOverlay(target)
-                        Toast.makeText(
-                            this@AppLockAccessibilityService,
-                            "Could not open biometric prompt",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        } catch (_: Exception) {
+                            biometricInProgress = false
+                            pendingBiometricPackage = null
+                            showLockOverlay(target)
+                            Toast.makeText(
+                                this@AppLockAccessibilityService,
+                                "Could not open biometric prompt",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 }
             }
@@ -248,7 +252,7 @@ class AppLockAccessibilityService : AccessibilityService() {
     private fun removeOverlay() {
         val current = overlay ?: return
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
-        runCatching { wm.removeView(current) }
+        runCatching { wm.removeViewImmediate(current) }
         overlay = null
         overlayPackage = null
     }
