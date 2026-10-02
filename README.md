@@ -2,7 +2,7 @@
 
 <p align="center">
   <img
-    src="https://raw.githubusercontent.com/Jackson4Rocks/AppGuard/main/docs/appguard_icon.png"
+    src="https://raw.githubusercontent.com/Jackson4Rocks/AppGuard/main/docs/appguard_icon.svg"
     width="180"
     alt="AppGuard icon"
     style="border-radius: 34px;"
@@ -28,7 +28,8 @@
 - 🔐 **App locking** — choose which installed apps should require authentication.
 - 🔢 **PIN protection** — create and change your own AppGuard PIN.
 - 👆 **Biometric unlock** — use fingerprint, face authentication, or your device credential where supported.
-- 🎨 **Material 3 UI** — layout-based dashboard with an app bar, status pill, summary cards, and protected-app list.
+- 🎨 **Material 3 UI** — layout-based dashboard with an app bar, status pill, summary cards, protected-app list, and an in-app Settings screen.
+- 👨‍💻 **Project Maintainer** — Settings includes Leon Sony with a direct GitHub profile button.
 - ⚡ **Lightweight design** — no network permission is required by the app.
 - 🧩 **Accessibility-based lock detection** — AppGuard watches for protected apps opening and places its authentication screen over them.
 
