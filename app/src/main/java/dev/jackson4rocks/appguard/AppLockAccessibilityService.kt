@@ -117,7 +117,7 @@ class AppLockAccessibilityService : AccessibilityService() {
         if (packageName != lastPackage) {
             val previous = lastPackage
             if (!biometricInProgress && previous == unlockedPackage && previous != packageName) {
-                armRelock(previous)
+                previous?.let { armRelock(it) }
             }
             lastPackage = packageName
         }
