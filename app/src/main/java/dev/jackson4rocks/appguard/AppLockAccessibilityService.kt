@@ -37,6 +37,15 @@ class AppLockAccessibilityService : AccessibilityService() {
     private var biometricInProgress = false
     private var pendingBiometricPackage: String? = null
 
+    private val controlReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                ACTION_LOCKS_CHANGED -> refreshPackageFilter()
+                ACTION_PAUSE_PROTECTION -> disableSelf()
+            }
+        }
+    }
+
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_SCREEN_OFF && lockPreferences.lockOnScreenOff()) {
@@ -80,6 +89,15 @@ class AppLockAccessibilityService : AccessibilityService() {
         runCatching {
             ContextCompat.registerReceiver(
                 this,
+                controlReceiver,
+                IntentFilter().apply {
+                    addAction(ACTION_LOCKS_CHANGED)
+                    addAction(ACTION_PAUSE_PROTECTION)
+                },
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            ContextCompat.registerReceiver(
+                this,
                 biometricReceiver,
                 IntentFilter().apply {
                     addAction(ACTION_BIOMETRIC_UNLOCKED)
@@ -108,11 +126,7 @@ class AppLockAccessibilityService : AccessibilityService() {
         val packageName = event?.packageName?.toString() ?: return
         if (packageName == this.packageName) return
 
-        val windowEvent =
-            event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
-                event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
-
-        if (!windowEvent) return
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
 
         if (packageName != lastPackage) {
             val previous = lastPackage
@@ -369,6 +383,7 @@ class AppLockAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         removeOverlay()
         handler.removeCallbacksAndMessages(RELOCK_TOKEN)
+        runCatching { unregisterReceiver(controlReceiver) }
         runCatching { unregisterReceiver(biometricReceiver) }
         runCatching { unregisterReceiver(screenReceiver) }
         super.onDestroy()
@@ -396,6 +411,8 @@ class AppLockAccessibilityService : AccessibilityService() {
     companion object {
         const val ACTION_BIOMETRIC_UNLOCKED = "dev.jackson4rocks.appguard.BIOMETRIC_UNLOCKED"
         const val ACTION_BIOMETRIC_CANCELLED = "dev.jackson4rocks.appguard.BIOMETRIC_CANCELLED"
+        const val ACTION_LOCKS_CHANGED = "dev.jackson4rocks.appguard.LOCKS_CHANGED"
+        const val ACTION_PAUSE_PROTECTION = "dev.jackson4rocks.appguard.PAUSE_PROTECTION"
         const val EXTRA_PACKAGE = "target_package"
         private const val RELOCK_TOKEN = "appguard_relock"
     }
