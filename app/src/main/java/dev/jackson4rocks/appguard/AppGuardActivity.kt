@@ -36,6 +36,11 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -58,11 +63,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 
-private enum class GuardTab(val label: String, val glyph: String) {
-    HOME("Home", "⌂"),
-    APPS("Apps", "▦"),
-    SECURITY("Security", "◇"),
-    MORE("More", "⋯")
+private enum class GuardTab(val label: String) {
+    HOME("Home"),
+    APPS("Apps"),
+    SECURITY("Security"),
+    MORE("More")
 }
 
 class AppGuardActivity : ComponentActivity() {
@@ -118,7 +123,14 @@ private fun AppGuardApp() {
                     NavigationBarItem(
                         selected = currentTab == tab.name,
                         onClick = { currentTab = tab.name },
-                        icon = { Text(tab.glyph) },
+                        icon = {
+    when (tab) {
+        GuardTab.HOME -> androidx.compose.material3.Icon(Icons.Default.Home, contentDescription = null)
+        GuardTab.APPS -> androidx.compose.material3.Icon(Icons.Default.Apps, contentDescription = null)
+        GuardTab.SECURITY -> androidx.compose.material3.Icon(Icons.Default.Security, contentDescription = null)
+        GuardTab.MORE -> androidx.compose.material3.Icon(Icons.Default.MoreHoriz, contentDescription = null)
+    }
+},
                         label = { Text(tab.label) }
                     )
                 }
@@ -407,6 +419,27 @@ private fun SecurityTab(
                     ) {
                         Text("Open Accessibility settings")
                     }
+                }
+            }
+        }
+
+        item {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                )
+            ) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Why Accessibility is required",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        "AppGuard uses Android Accessibility only to detect selected protected apps becoming active. It does not read their screen content or use the service to change security settings.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
