@@ -25,10 +25,12 @@
 - 🔐 **App locking** — choose which installed apps should require authentication.
 - 🔢 **PIN protection** — create and change your own AppGuard PIN.
 - 👆 **Biometric unlock** — use fingerprint, face authentication, or your device credential where supported.
-- 🎨 **Material 3 UI** — layout-based dashboard with an app bar, status pill, summary cards, protected-app list, and an in-app Settings screen.
-- 👨‍💻 **Project Maintainer** — Settings includes Leon Sony with a direct GitHub profile button.
+- 🎨 **Material 3 UI** — roomy Material 3 dashboard with Home, Apps, Security, and More navigation.
+- 👨‍💻 **Project Maintainer** — More includes Project Maintainer information and a direct GitHub profile button.
 - ⚡ **Lightweight design** — no network permission is required by the app.
 - 🧩 **Accessibility-based lock detection** — AppGuard watches for protected apps opening and places its authentication screen over them.
+- 🛡️ **Least-privilege event scope** — the service only listens for window-state events from the apps you explicitly protect.
+- ⏸️ **Pause protection** — manually disable AppGuard's Accessibility service when you need to use a sensitive app without the service enabled.
 
 ## 🚀 Getting started
 
@@ -39,7 +41,7 @@
 5. Select the apps you want to protect.
 6. Open one of those apps — AppGuard will ask for authentication before letting you continue.
 
-On recent Android versions, sideloaded apps that expose sensitive capabilities such as Accessibility Services may receive an additional system security confirmation. AppGuard does not bypass that protection; follow Android's system settings flow to enable the service.
+On recent Android versions, sideloaded apps that expose sensitive capabilities such as Accessibility Services may receive an additional system security confirmation. AppGuard does not bypass that protection. The app includes an explicit accessibility disclosure and a manual Pause protection control.
 
 ### 🔑 Unlocking
 
