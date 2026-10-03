@@ -114,6 +114,13 @@ class AppLockAccessibilityService : AccessibilityService() {
         }
     }
 
+    private fun refreshPackageFilter() {
+        val info = serviceInfo
+        info.packageNames = pinStore.lockedPackages().toTypedArray()
+        info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        serviceInfo = info
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         runCatching {
             handleAccessibilityEvent(event)
