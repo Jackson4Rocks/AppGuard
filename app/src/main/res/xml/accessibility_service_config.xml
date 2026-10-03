@@ -7,4 +7,4 @@
     android:description="@string/accessibility_service_description"
     android:intro="@string/accessibility_service_intro"
     android:notificationTimeout="100"
-    android:settingsActivity="dev.jackson4rocks.appguard.MainActivity" />
+    android:settingsActivity="dev.jackson4rocks.appguard.AppGuardActivity" />
