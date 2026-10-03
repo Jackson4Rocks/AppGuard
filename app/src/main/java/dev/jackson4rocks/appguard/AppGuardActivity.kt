@@ -640,6 +640,27 @@ private fun MoreTab(
         item {
             Card(shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.padding(18.dp)) {
+                    Text("Protection controls", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Need to use a banking or other sensitive app without AppGuard's Accessibility service enabled? Pause protection manually here, then re-enable AppGuard from Android Accessibility settings when you're finished.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Button(
+                        onClick = {
+                            context.sendBroadcast(
+                                Intent(AppLockAccessibilityService.ACTION_PAUSE_PROTECTION)
+                                    .setPackage(context.packageName)
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text("Pause protection")
+                    }
+
+                    Spacer(Modifier.height(18.dp))
                     Text("App information", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(6.dp))
                     Text("AppGuard 0.3.0", color = MaterialTheme.colorScheme.primary)
